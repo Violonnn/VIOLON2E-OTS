@@ -218,7 +218,7 @@ public class input_order {
             int action = 0;
             if (sc.hasNextInt()) {
                 action = sc.nextInt();
-                sc.nextLine();  // Consume newline
+                sc.nextLine();  
             } else {
                 System.out.println("[Invalid input. Please enter a number from 1 to 5]");
                 sc.next();
