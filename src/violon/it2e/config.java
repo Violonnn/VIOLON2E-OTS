@@ -16,7 +16,7 @@ public static Connection connectDB() {
         try {
             Class.forName("org.sqlite.JDBC"); // Load the SQLite JDBC driver
             con = DriverManager.getConnection("jdbc:sqlite:database_ni_violon.db"); // Establish connection
-            System.out.println("Connection Successful");
+//            System.out.println("Connection Successful");
         } catch (Exception e) {
             System.out.println("Connection Failed: " + e);
         }
@@ -198,4 +198,155 @@ public void addRecord(String sql, Object... values) {
         return result;
     }
     
+    public String getSingleValueAsString(String query, Object... params) {
+    String result = "";
+    try (Connection conn = connectDB();
+         PreparedStatement stmt = conn.prepareStatement(query)) {
+        // Set parameters
+        for (int i = 0; i < params.length; i++) {
+            stmt.setObject(i + 1, params[i]);
+        }
+
+        ResultSet rs = stmt.executeQuery();
+        if (rs.next()) {
+            result = rs.getString(1);  // Ensure you're fetching the first column as a String
+        }
+    } catch (SQLException ex) {
+        ex.printStackTrace();
+    }
+    return result;
 }
+    
+    
+    
+    
+    
+ public void viewRecords(String sqlQuery, String[] columnHeaders, String[] columnNames, int carrierId) {
+    // Check that columnHeaders and columnNames arrays are the same length
+    if (columnHeaders.length != columnNames.length) {
+        System.out.println("Error: Mismatch between column headers and column names.");
+        return;
+    }
+
+    // Modify SQL query if carrierId is provided (assuming it's for filtering by carrierId)
+    if (carrierId > 0) {
+        sqlQuery += " WHERE carrier_id = ?"; // Adjust this as needed for your database schema
+    }
+
+    try (Connection conn = this.connectDB();
+         PreparedStatement pstmt = conn.prepareStatement(sqlQuery)) {
+
+        // Set the carrierId parameter if applicable
+        if (carrierId > 0) {
+            pstmt.setInt(1, carrierId); // Set carrierId as the first parameter
+        }
+
+        try (ResultSet rs = pstmt.executeQuery()) {
+            // Print the headers dynamically
+            StringBuilder headerLine = new StringBuilder();
+            headerLine.append("----------------------------------------------------------------------------------------------------------------------------------------------------------------\n| ");
+            for (String header : columnHeaders) {
+                headerLine.append(String.format("%-20s | ", header)); // Adjust formatting as needed
+            }
+            headerLine.append("\n----------------------------------------------------------------------------------------------------------------------------------------------------------------");
+
+            System.out.println(headerLine.toString());
+
+            boolean foundRecords = false;  // Flag to check if any records are found
+
+            // Print the rows dynamically based on the provided column names
+            while (rs.next()) {
+                StringBuilder row = new StringBuilder("| ");
+                for (String colName : columnNames) {
+                    String value = rs.getString(colName);
+                    row.append(String.format("%-20s | ", value != null ? value : "")); // Adjust formatting
+                }
+                System.out.println(row.toString());
+                foundRecords = true;
+            }
+            if (!foundRecords) {
+                System.out.println("No records found for the specified carrier.");
+            }
+
+            System.out.println("----------------------------------------------------------------------------------------------------------------------------------------------------------------");
+
+        } catch (SQLException e) {
+            System.out.println("Error retrieving records: " + e.getMessage());
+        }
+    } catch (SQLException e) {
+        System.out.println("Error preparing the query: " + e.getMessage());
+    }
+}
+
+    
+    
+    public boolean hasOrders(int carrierId) {
+    String sql = "SELECT COUNT(*) FROM tbl_order WHERE c_id = ?";
+    try (Connection conn = this.connectDB();
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        pstmt.setInt(1, carrierId);
+        ResultSet rs = pstmt.executeQuery();
+        
+        if (rs.next()) {
+            int orderCount = rs.getInt(1);
+            return orderCount > 0; // Return true if count is greater than 0
+        }
+    } catch (SQLException e) {
+        System.out.println("Error checking orders for carrier: " + e.getMessage());
+    }
+    return false;
+}
+    
+    
+    public void viewCarOrder(String sqlQuery, String[] columnHeaders, String[] columnNames, int carrierId) {
+    if (columnHeaders.length != columnNames.length) {
+        System.out.println("Error: Mismatch between column headers and column names.");
+        return;
+    }
+
+    try (Connection conn = this.connectDB();
+         PreparedStatement pstmt = conn.prepareStatement(sqlQuery)) {
+
+        // Bind carrierId to query
+        pstmt.setInt(1, carrierId);
+
+        try (ResultSet rs = pstmt.executeQuery()) {
+
+            // Print headers
+            StringBuilder headerLine = new StringBuilder();
+            headerLine.append("----------------------------------------------------------------------------------------------------------------------------------------------------------------\n| ");
+            for (String header : columnHeaders) {
+                headerLine.append(String.format("%-20s | ", header));
+            }
+            headerLine.append("\n----------------------------------------------------------------------------------------------------------------------------------------------------------------");
+
+            System.out.println(headerLine.toString());
+
+            // Print records dynamically
+            boolean recordsFound = false;
+            while (rs.next()) {
+                recordsFound = true;
+                StringBuilder row = new StringBuilder("| ");
+                for (String colName : columnNames) {
+                    String value = rs.getString(colName);
+                    row.append(String.format("%-20s | ", value != null ? value : ""));
+                }
+                System.out.println(row.toString());
+            }
+            System.out.println("----------------------------------------------------------------------------------------------------------------------------------------------------------------");
+
+            if (!recordsFound) {
+                System.out.println("No orders found for this carrier.");
+            }
+        }
+    } catch (SQLException e) {
+        System.out.println("Error retrieving records: " + e.getMessage());
+    }
+}
+
+    
+    
+    
+    
+}
+
